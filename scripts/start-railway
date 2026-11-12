@@ -1,0 +1,11 @@
+#!/bin/sh
+set -eu
+
+exec python -m gunicorn \
+    --bind "0.0.0.0:${PORT:-5000}" \
+    --workers "${WEB_CONCURRENCY:-2}" \
+    --threads 2 \
+    --timeout 120 \
+    --access-logfile - \
+    --error-logfile - \
+    invenio_app.wsgi:application

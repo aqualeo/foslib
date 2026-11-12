@@ -23,6 +23,7 @@ dependencies = [
   "alembic>=1.16.4,<2.0.0",
   "click>=8.1.8,<9.0.0",
   "flask-debugtoolbar>=0.15.1,<1.0.0",
+  "gunicorn>=23.0.0,<24.0.0",
   "invenio-access>=5.0.0,<6.0.0",
   "invenio-accounts>=7.0.0,<8.0.0",
   "invenio-app>=3.0.0,<4.0.0",

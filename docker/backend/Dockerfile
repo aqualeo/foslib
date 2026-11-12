@@ -31,3 +31,6 @@ RUN chgrp -R 0 ${WORKING_DIR} && \
 
 RUN chown -R invenio:root ${WORKING_DIR}
 USER 1000
+
+# Run an HTTP server directly behind Railway's HTTPS proxy.
+CMD ["/bin/sh", "scripts/start-railway"]
