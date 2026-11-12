@@ -1,4 +1,19 @@
+const path = require('path');
+
 module.exports = {
   plugins: [{ plugin: require('@semantic-ui-react/craco-less') }],
   eslint: { enable: false },
+  webpack: {
+    configure: (config) => {
+      config.resolve.plugins = config.resolve.plugins.filter(
+        (plugin) => plugin.constructor.name !== 'ModuleScopePlugin'
+      );
+      return config;
+    },
+    alias: {
+      '@inveniosoftware/react-invenio-app-ils$': path.resolve(
+        __dirname, 'node_modules/@inveniosoftware/react-invenio-app-ils/dist/esm/index.js'
+      ),
+    },
+  },
 };
