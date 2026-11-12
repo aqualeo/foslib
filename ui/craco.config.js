@@ -8,6 +8,11 @@ module.exports = {
       config.resolve.plugins = config.resolve.plugins.filter(
         (plugin) => plugin.constructor.name !== 'ModuleScopePlugin'
       );
+      // CRA 5 otherwise emits Axios's .cjs entry as a downloadable asset.
+      config.module.rules.find((rule) => rule.oneOf).oneOf.unshift({
+        test: /\.cjs$/,
+        type: 'javascript/auto',
+      });
       return config;
     },
     alias: {
