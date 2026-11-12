@@ -6,23 +6,31 @@ import secrets
 
 import psycopg
 import pytest
+from conftest import ALPHA, BETA
 
 from invenio_app_ils.multitenancy.context import new_capability, tenant_transaction
 
-from conftest import ALPHA, BETA
 
-
-@pytest.mark.parametrize("user,tenant,barcode", [(1, ALPHA, "ALPHA-001"), (2, BETA, "BETA-001")])
+@pytest.mark.parametrize(
+    "user,tenant,barcode", [(1, ALPHA, "ALPHA-001"), (2, BETA, "BETA-001")]
+)
 def test_reciprocal_read_isolation(runtime, tokens, user, tenant, barcode):
     with tenant_transaction(runtime, tokens[user], tenant):
-        assert runtime.execute("SELECT barcode FROM foslib.test_copies").fetchall() == [(barcode,)]
-        assert runtime.execute("SELECT title FROM foslib.test_catalogue").fetchall() == [("Shared book",)]
+        assert runtime.execute("SELECT barcode FROM foslib.test_copies").fetchall() == [
+            (barcode,)
+        ]
+        assert runtime.execute(
+            "SELECT title FROM foslib.test_catalogue"
+        ).fetchall() == [("Shared book",)]
 
 
-@pytest.mark.parametrize("sql", [
-    "UPDATE foslib.test_copies SET barcode='stolen' WHERE id=2",
-    "DELETE FROM foslib.test_copies WHERE id=2",
-])
+@pytest.mark.parametrize(
+    "sql",
+    [
+        "UPDATE foslib.test_copies SET barcode='stolen' WHERE id=2",
+        "DELETE FROM foslib.test_copies WHERE id=2",
+    ],
+)
 def test_other_tenant_write_matches_no_rows(runtime, tokens, sql):
     with tenant_transaction(runtime, tokens[1], ALPHA):
         assert runtime.execute(sql).rowcount == 0
@@ -31,7 +39,9 @@ def test_other_tenant_write_matches_no_rows(runtime, tokens, sql):
 def test_forged_tenant_insert(runtime, tokens):
     with pytest.raises(psycopg.errors.InsufficientPrivilege):
         with tenant_transaction(runtime, tokens[1], ALPHA):
-            runtime.execute("INSERT INTO foslib.test_copies VALUES (%s,99,1,'forged')", (BETA,))
+            runtime.execute(
+                "INSERT INTO foslib.test_copies VALUES (%s,99,1,'forged')", (BETA,)
+            )
 
 
 def test_cross_tenant_foreign_key(runtime, tokens):
@@ -40,7 +50,9 @@ def test_cross_tenant_foreign_key(runtime, tokens):
             runtime.execute("INSERT INTO foslib.test_loans VALUES (%s,1,2)", (ALPHA,))
 
 
-@pytest.mark.parametrize("token", [None, "", "x" * 64, "f" * 64, "'; SET ROLE foslib_owner; --"])
+@pytest.mark.parametrize(
+    "token", [None, "", "x" * 64, "f" * 64, "'; SET ROLE foslib_owner; --"]
+)
 def test_forged_token(runtime, token):
     with pytest.raises(psycopg.errors.InvalidAuthorizationSpecification):
         with tenant_transaction(runtime, token, BETA):
@@ -57,7 +69,9 @@ def test_missing_context_and_arbitrary_guc(runtime):
     with runtime.transaction():
         runtime.execute("SELECT set_config('foslib.tenant_id', %s, true)", (BETA,))
         runtime.execute("SELECT set_config('app.tenant_id', %s, false)", (BETA,))
-        assert runtime.execute("SELECT foslib.current_tenant_id()").fetchone() == (None,)
+        assert runtime.execute("SELECT foslib.current_tenant_id()").fetchone() == (
+            None,
+        )
         assert runtime.execute("SELECT * FROM foslib.test_copies").fetchall() == []
 
 
@@ -65,7 +79,9 @@ def test_missing_context_and_arbitrary_guc(runtime):
 def test_pool_connection_does_not_leak(runtime, tokens, commit):
     try:
         with tenant_transaction(runtime, tokens[1], ALPHA):
-            assert runtime.execute("SELECT count(*) FROM foslib.test_copies").fetchone() == (1,)
+            assert runtime.execute(
+                "SELECT count(*) FROM foslib.test_copies"
+            ).fetchone() == (1,)
             if not commit:
                 raise ValueError("simulate request failure")
     except ValueError:
@@ -74,7 +90,9 @@ def test_pool_connection_does_not_leak(runtime, tokens, commit):
         assert runtime.execute("SELECT foslib.current_user_id()").fetchone() == (None,)
         assert runtime.execute("SELECT * FROM foslib.test_copies").fetchall() == []
     with tenant_transaction(runtime, tokens[2], BETA):
-        assert runtime.execute("SELECT barcode FROM foslib.test_copies").fetchall() == [("BETA-001",)]
+        assert runtime.execute("SELECT barcode FROM foslib.test_copies").fetchall() == [
+            ("BETA-001",)
+        ]
 
 
 def test_context_cannot_change_within_transaction(runtime, tokens):
@@ -92,14 +110,21 @@ def test_nested_transaction_rejected(runtime, tokens):
 
 def test_authorised_memberships_only(runtime, tokens):
     with tenant_transaction(runtime, tokens[1], None):
-        assert runtime.execute("SELECT slug FROM foslib.my_schools()").fetchall() == [("alpha",)]
+        assert runtime.execute("SELECT slug FROM foslib.my_schools()").fetchall() == [
+            ("alpha",)
+        ]
     with tenant_transaction(runtime, tokens[6], None):
-        assert runtime.execute("SELECT slug FROM foslib.my_schools()").fetchall() == [("alpha",), ("beta",)]
+        assert runtime.execute("SELECT slug FROM foslib.my_schools()").fetchall() == [
+            ("alpha",),
+            ("beta",),
+        ]
 
 
 def test_background_worker(runtime, tokens):
     with tenant_transaction(runtime, tokens[5], ALPHA):
-        assert runtime.execute("SELECT barcode FROM foslib.test_copies").fetchall() == [("ALPHA-001",)]
+        assert runtime.execute("SELECT barcode FROM foslib.test_copies").fetchall() == [
+            ("ALPHA-001",)
+        ]
     with pytest.raises(psycopg.errors.InvalidAuthorizationSpecification):
         with tenant_transaction(runtime, tokens[5], BETA):
             pytest.fail("worker crossed tenant boundary")
@@ -108,20 +133,25 @@ def test_background_worker(runtime, tokens):
 def test_reader_cannot_write(runtime, tokens):
     with pytest.raises(psycopg.errors.InsufficientPrivilege):
         with tenant_transaction(runtime, tokens[4], ALPHA):
-            runtime.execute("INSERT INTO foslib.test_copies VALUES (%s,98,1,'reader')", (ALPHA,))
+            runtime.execute(
+                "INSERT INTO foslib.test_copies VALUES (%s,98,1,'reader')", (ALPHA,)
+            )
 
 
-@pytest.mark.parametrize("sql", [
-    "SELECT * FROM foslib_private.auth_sessions",
-    "SELECT * FROM foslib_private.memberships",
-    "SELECT * FROM foslib_private.transaction_context",
-    "SELECT * FROM foslib_private.admin_audit",
-    "SET ROLE foslib_owner",
-    "SET ROLE foslib_auth_broker",
-    "SELECT foslib.issue_session(1,decode(repeat('ff',32),'hex'),now()+interval '1 hour')",
-    "UPDATE foslib.test_catalogue SET title='unauthorised'",
-    "TRUNCATE foslib.test_copies CASCADE",
-])
+@pytest.mark.parametrize(
+    "sql",
+    [
+        "SELECT * FROM foslib_private.auth_sessions",
+        "SELECT * FROM foslib_private.memberships",
+        "SELECT * FROM foslib_private.transaction_context",
+        "SELECT * FROM foslib_private.admin_audit",
+        "SET ROLE foslib_owner",
+        "SET ROLE foslib_auth_broker",
+        "SELECT foslib.issue_session(1,decode(repeat('ff',32),'hex'),now()+interval '1 hour')",
+        "UPDATE foslib.test_catalogue SET title='unauthorised'",
+        "TRUNCATE foslib.test_copies CASCADE",
+    ],
+)
 def test_runtime_cannot_escalate(runtime, sql):
     with pytest.raises(psycopg.errors.InsufficientPrivilege):
         runtime.execute(sql)
@@ -130,12 +160,18 @@ def test_runtime_cannot_escalate(runtime, sql):
 def test_platform_admin_is_explicit_and_audited(runtime, tokens, database):
     with pytest.raises(psycopg.errors.InsufficientPrivilege):
         with tenant_transaction(runtime, tokens[1], ALPHA):
-            runtime.execute("SELECT foslib.admin_set_school(%s,'alpha','Hijacked',true)", (ALPHA,))
+            runtime.execute(
+                "SELECT foslib.admin_set_school(%s,'alpha','Hijacked',true)", (ALPHA,)
+            )
     with tenant_transaction(runtime, tokens[3], None):
         assert runtime.execute("SELECT * FROM foslib.test_copies").fetchall() == []
-        runtime.execute("SELECT foslib.admin_set_school(%s,'alpha','Alpha School',true)", (ALPHA,))
+        runtime.execute(
+            "SELECT foslib.admin_set_school(%s,'alpha','Alpha School',true)", (ALPHA,)
+        )
     with psycopg.connect(database[0]) as owner:
-        assert owner.execute("SELECT actor_user_id,action FROM foslib_private.admin_audit").fetchall() == [(3, "school.upsert")]
+        assert owner.execute(
+            "SELECT actor_user_id,action FROM foslib_private.admin_audit"
+        ).fetchall() == [(3, "school.upsert")]
 
 
 def test_revocation_rechecked_in_active_transaction(runtime, tokens, database):
@@ -143,9 +179,13 @@ def test_revocation_rechecked_in_active_transaction(runtime, tokens, database):
     digest = hashlib.sha256(token.encode()).digest()
     with psycopg.connect(database[0], autocommit=True) as owner:
         owner.execute("SET ROLE foslib_auth_broker")
-        owner.execute("SELECT foslib.issue_session(1,%s,now()+interval '1 hour')", (digest,))
+        owner.execute(
+            "SELECT foslib.issue_session(1,%s,now()+interval '1 hour')", (digest,)
+        )
         with tenant_transaction(runtime, token, ALPHA):
-            assert runtime.execute("SELECT count(*) FROM foslib.test_copies").fetchone() == (1,)
+            assert runtime.execute(
+                "SELECT count(*) FROM foslib.test_copies"
+            ).fetchone() == (1,)
             owner.execute("SELECT foslib.revoke_session(%s)", (digest,))
             assert runtime.execute("SELECT * FROM foslib.test_copies").fetchall() == []
 
@@ -159,24 +199,41 @@ def test_capabilities_are_random():
 
 def test_missing_context_denies_insert(runtime):
     with pytest.raises(psycopg.errors.InsufficientPrivilege):
-        runtime.execute("INSERT INTO foslib.test_copies VALUES (%s,97,1,'missing')", (ALPHA,))
+        runtime.execute(
+            "INSERT INTO foslib.test_copies VALUES (%s,97,1,'missing')", (ALPHA,)
+        )
 
 
-@pytest.mark.parametrize("disable,restore", [
-    ("UPDATE foslib_private.memberships SET active=false WHERE user_id=1",
-     "UPDATE foslib_private.memberships SET active=true WHERE user_id=1"),
-    ("UPDATE foslib_private.principals SET active=false WHERE user_id=1",
-     "UPDATE foslib_private.principals SET active=true WHERE user_id=1"),
-    ("UPDATE foslib_private.tenants SET active=false WHERE slug='alpha'",
-     "UPDATE foslib_private.tenants SET active=true WHERE slug='alpha'"),
-])
-def test_revoked_access_rechecked_each_statement(runtime, tokens, database, disable, restore):
+@pytest.mark.parametrize(
+    "disable,restore",
+    [
+        (
+            "UPDATE foslib_private.memberships SET active=false WHERE user_id=1",
+            "UPDATE foslib_private.memberships SET active=true WHERE user_id=1",
+        ),
+        (
+            "UPDATE foslib_private.principals SET active=false WHERE user_id=1",
+            "UPDATE foslib_private.principals SET active=true WHERE user_id=1",
+        ),
+        (
+            "UPDATE foslib_private.tenants SET active=false WHERE slug='alpha'",
+            "UPDATE foslib_private.tenants SET active=true WHERE slug='alpha'",
+        ),
+    ],
+)
+def test_revoked_access_rechecked_each_statement(
+    runtime, tokens, database, disable, restore
+):
     with psycopg.connect(database[0], autocommit=True) as owner:
         try:
             with tenant_transaction(runtime, tokens[1], ALPHA):
-                assert runtime.execute("SELECT count(*) FROM foslib.test_copies").fetchone() == (1,)
+                assert runtime.execute(
+                    "SELECT count(*) FROM foslib.test_copies"
+                ).fetchone() == (1,)
                 owner.execute(disable)
-                assert runtime.execute("SELECT * FROM foslib.test_copies").fetchall() == []
+                assert (
+                    runtime.execute("SELECT * FROM foslib.test_copies").fetchall() == []
+                )
         finally:
             owner.execute(restore)
 
@@ -185,9 +242,14 @@ def test_expired_session_denied(runtime, database):
     token, digest = new_capability()
     with psycopg.connect(database[0], autocommit=True) as owner:
         owner.execute("SET ROLE foslib_auth_broker")
-        owner.execute("SELECT foslib.issue_session(1,%s,now()+interval '1 hour')", (digest,))
+        owner.execute(
+            "SELECT foslib.issue_session(1,%s,now()+interval '1 hour')", (digest,)
+        )
         owner.execute("RESET ROLE")
-        owner.execute("UPDATE foslib_private.auth_sessions SET expires_at=now()-interval '1 second' WHERE token_hash=%s", (digest,))
+        owner.execute(
+            "UPDATE foslib_private.auth_sessions SET expires_at=now()-interval '1 second' WHERE token_hash=%s",
+            (digest,),
+        )
     with pytest.raises(psycopg.errors.InvalidAuthorizationSpecification):
         with tenant_transaction(runtime, token, ALPHA):
             pytest.fail("expired capability accepted")
@@ -195,9 +257,19 @@ def test_expired_session_denied(runtime, database):
 
 def test_search_path_cannot_shadow_authentication(runtime, tokens):
     with runtime.transaction():
-        runtime.execute("CREATE TEMP TABLE transaction_context(backend_pid integer, transaction_id xid8, tenant_id uuid)")
-        runtime.execute("INSERT INTO transaction_context VALUES (pg_backend_pid(),pg_current_xact_id(),%s)", (BETA,))
+        runtime.execute(
+            "CREATE TEMP TABLE transaction_context(backend_pid integer, transaction_id xid8, tenant_id uuid)"
+        )
+        runtime.execute(
+            "INSERT INTO transaction_context VALUES (pg_backend_pid(),pg_current_xact_id(),%s)",
+            (BETA,),
+        )
         runtime.execute("SELECT set_config('search_path','pg_temp,public,foslib',true)")
         runtime.execute("SELECT foslib.activate_context(%s,%s)", (tokens[1], ALPHA))
-        assert str(runtime.execute("SELECT foslib.current_tenant_id()").fetchone()[0]) == ALPHA
-        assert runtime.execute("SELECT barcode FROM foslib.test_copies").fetchall() == [("ALPHA-001",)]
+        assert (
+            str(runtime.execute("SELECT foslib.current_tenant_id()").fetchone()[0])
+            == ALPHA
+        )
+        assert runtime.execute("SELECT barcode FROM foslib.test_copies").fetchall() == [
+            ("ALPHA-001",)
+        ]

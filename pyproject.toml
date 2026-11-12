@@ -71,6 +71,7 @@ Homepage = "https://github.com/inveniosoftware/invenio-app-ils"
 ils = "invenio_app.cli:cli"
 
 [project.entry-points."flask.commands"]
+foslib-catalogue = "invenio_app_ils.multitenancy.catalogue_cli:catalogue"
 demo = "invenio_app_ils.cli:demo"
 fixtures = "invenio_app_ils.cli:fixtures"
 patrons = "invenio_app_ils.patrons.cli:patrons"

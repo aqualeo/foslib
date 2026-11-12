@@ -1,0 +1,12 @@
+{
+  "source": "Open Library Books API (edition metadata)",
+  "source_license": "CC0-1.0",
+  "license_reference": "https://openlibrary.org/developers/licensing",
+  "record_count": 1000,
+  "sha256": "dc8add0487acc8a979e0fea10d26db44c03e7f797e4e11c50e6a47fda6a8dc06",
+  "retrieved_at": "2026-11-12T11:07:24.852646+00:00",
+  "images_included": false,
+  "missing_publication_year": 16,
+  "missing_publishers": 11,
+  "missing_authors": 0
+}

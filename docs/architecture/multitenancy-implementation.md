@@ -99,7 +99,7 @@ authorise later transactions even before cleanup.
 ## Local security tests
 
 Create a virtual environment and install `pytest`, `psycopg[binary]` and
-`pgserver==0.1.4`. These are development tools; no new runtime dependency has
+`pgserver==0.1.4`, Flask and Click. These are development tools; no new runtime dependency has
 been added. `pgserver` supplies an isolated PostgreSQL 16 instance and does not
 connect to staging. Run:
 
@@ -112,6 +112,22 @@ models. Tests exercise reciprocal RLS, write denial, composite FKs, token/GUC
 forgery, membership switching, capability revocation, reader/worker permissions,
 transaction/pool reuse, privilege escalation, and explicit audited admin access.
 Passing them does not claim the unchanged production ILS tables are isolated.
+
+The full existing application dependencies enable an additional integration
+test that imports all 1,000 editions through actual Document/PID APIs and checks
+that a second import preserves edits and creates no duplicates. A dedicated CI
+workflow runs these tests against PostgreSQL 18. Local `pgserver` uses version
+16, so local results alone do not establish PostgreSQL 18 validation. CI accepts
+only a dedicated disposable `*_test` database via `FOSLIB_TEST_POSTGRES_DSN`.
+
+## Shared catalogue implementation
+
+The committed [Open Library snapshot](../../data/catalogue/README.md) supplies
+1,000 genuine, checksum-valid editions with explicit CC0 provenance. The
+repeatable downloader keeps work-level search data out of edition metadata.
+The new `ils foslib-catalogue` commands validate, preview, atomically import
+through the existing Document/PID APIs and separately queue search indexing.
+The Docker image includes the snapshot. No live staging import has occurred.
 
 ## Migration and rollback review
 
@@ -143,3 +159,10 @@ online. `foslib-worker` was crashed. Its log identifies RabbitMQ
 This identifies the immediate failure, not the underlying slow/stuck task.
 Inspect task identity, duration, retries and downstream waits before changing
 timeouts or restarting queued work. No infrastructure settings were changed.
+
+Chromium also loaded the public homepage with HTTP 200, visible catalogue
+content and no JavaScript page errors. It showed the earlier fictional Alpha
+and Beta sample titles. This was a baseline check, not an authenticated
+multi-tenant acceptance test. Railway MCP access is available, but CLI access
+for in-network execution requires a separate sign-in; its secure device flow
+was requested. The database remains private with no public TCP proxy.

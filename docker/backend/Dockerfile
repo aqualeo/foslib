@@ -39,6 +39,7 @@ RUN mkdir -p ${INVENIO_STATIC_FOLDER}
 RUN ./scripts/bootstrap
 
 COPY railway_wsgi.py ./railway_wsgi.py
+COPY data/catalogue/ ./data/catalogue/
 COPY --from=frontend /ui/build /opt/invenio_app_ils/ui
 
 # Set folder permissions
