@@ -11,6 +11,7 @@ module.exports = {
       return config;
     },
     alias: {
+      'axios$': path.resolve(__dirname, 'node_modules/axios/dist/browser/axios.cjs'),
       '@inveniosoftware/react-invenio-app-ils$': path.resolve(
         __dirname, 'node_modules/@inveniosoftware/react-invenio-app-ils/dist/esm/index.js'
       ),
