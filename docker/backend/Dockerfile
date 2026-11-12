@@ -3,7 +3,7 @@
 
 FROM ghcr.io/inveniosoftware/invenio:debian-python3.14 
 
-RUN apt-get update -y && apt-get install -y --no-install-recommends nodejs npm git ca-certificates && rm -rf /var/lib/apt/lists/*
+RUN apt-get update -y && apt-get install -y --no-install-recommends nodejs git ca-certificates && rm -rf /var/lib/apt/lists/*
 
 RUN python -m site
 RUN python -m site --user-site
