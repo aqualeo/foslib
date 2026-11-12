@@ -3,9 +3,7 @@
 
 FROM ghcr.io/inveniosoftware/invenio:debian-python3.14 
 
-RUN apt-get update -y && apt-get upgrade -y  && apt-get update -y
-RUN cd /tmp && curl -sL  https://rpm.nodesource.com/setup_16.x  -o nodesource_setup.sh && bash nodesource_setup.sh
-RUN apt-get install -y nodejs git vim
+RUN apt-get update -y && apt-get install -y --no-install-recommends nodejs npm git ca-certificates && rm -rf /var/lib/apt/lists/*
 
 RUN python -m site
 RUN python -m site --user-site
