@@ -25,6 +25,7 @@
         <span class="eyebrow">Your next chapter starts here</span>
         <h2>Welcome to your library</h2>
         <p>Sign in to discover books, care for your collection and keep your readers moving.</p>
+        {% block form_outer %}
         <form class="login-form" action="/login/" method="post">
           {{ login_user_form.hidden_tag() }}
           {% with messages = get_flashed_messages(with_categories=true) %}
@@ -49,6 +50,7 @@
           </div>
           <button class="btn login-submit" type="submit">Sign in</button>
         </form>
+        {% endblock form_outer %}
         <div class="login-note"><strong>A shared love of learning</strong>Use the account provided by your school or platform administrator. Your authorised school library opens after sign-in.</div>
       </main>
     </div>

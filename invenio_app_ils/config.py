@@ -280,6 +280,11 @@ EXTEND_LOANS_SCHEDULE_TIME = datetime.time(2)
 #: Database URI including user and password
 SQLALCHEMY_DATABASE_URI = "postgresql+psycopg2://test:psw@localhost/ils"
 
+# Opt-in until the reviewed ownership migration and restricted roles are ready.
+FOSLIB_MULTITENANT_ENABLED = False
+FOSLIB_AUTH_BROKER_URI = None
+FOSLIB_MAINTENANCE = False
+
 ###############################################################################
 # JSONSchemas
 ###############################################################################

@@ -227,6 +227,9 @@ class InvenioAppIls(object):
 
     def init_app(self, app):
         """Flask application initialization."""
+        from .multitenancy.runtime import install_runtime
+
+        install_runtime(app)
         self.update_config_records_rest(app)
         app.extensions["invenio-app-ils"] = _InvenioAppIlsState(app)
         app.register_blueprint(

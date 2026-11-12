@@ -20,6 +20,7 @@ from invenio_app_ils.circulation.notifications.tasks import (
 from invenio_app_ils.circulation.search import get_active_loans
 from invenio_app_ils.closures.api import find_next_open_date
 from invenio_app_ils.ill.api import circulation_item_location_retriever
+from invenio_app_ils.multitenancy.runtime import tenant_job_required
 from invenio_app_ils.proxies import current_app_ils
 
 
@@ -34,6 +35,7 @@ def _log(action, data):
 
 
 @shared_task
+@tenant_job_required
 def clean_locations_past_closures_exceptions():
     """Deletes all past exceptions."""
     modified_count = 0
@@ -95,6 +97,7 @@ def notify_location_updated(location_pid):
 
 
 @shared_task
+@tenant_job_required
 def extend_active_loans_location_closure(location_pid):
     """Extends all ongoing loans that would end on a closure."""
     modified_count = 0

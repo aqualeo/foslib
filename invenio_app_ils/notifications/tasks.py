@@ -8,6 +8,7 @@ import json
 from celery import shared_task
 from flask import current_app
 
+from invenio_app_ils.multitenancy.runtime import tenant_job_required
 from invenio_app_ils.notifications.models import NotificationsLogs
 
 
@@ -26,6 +27,7 @@ def _log_notification_to_db(data, log_message):
 
 
 @shared_task
+@tenant_job_required
 def log_successful_notification(_, data):
     """Log successful notification task."""
     log_msg = dict(
@@ -39,6 +41,7 @@ def log_successful_notification(_, data):
 
 
 @shared_task
+@tenant_job_required
 def log_error_notification(request, exc, traceback, data, **kwargs):
     """Log error when sending notification task."""
     error = dict(

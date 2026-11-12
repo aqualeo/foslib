@@ -135,6 +135,14 @@ BEGIN
   END IF;
   IF EXISTS (SELECT FROM foslib_private.transaction_context
        WHERE backend_pid = pg_backend_pid() AND transaction_id = pg_current_xact_id()) THEN
+    -- SQLAlchemy-Continuum may open an internal Session on the same physical
+    -- transaction. Re-entering the identical capability/school is harmless;
+    -- changing either identity or school is always rejected.
+    IF EXISTS (SELECT FROM foslib_private.transaction_context
+       WHERE backend_pid=pg_backend_pid() AND transaction_id=pg_current_xact_id()
+         AND token_hash=v_hash AND tenant_id IS NOT DISTINCT FROM p_tenant) THEN
+      RETURN;
+    END IF;
     RAISE EXCEPTION 'Tenant context already activated for this transaction' USING ERRCODE = '25001';
   END IF;
   INSERT INTO foslib_private.transaction_context(backend_pid, transaction_id, token_hash, tenant_id)

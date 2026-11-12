@@ -1,0 +1,67 @@
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "title": "Foslib event",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema",
+    "pid",
+    "action",
+    "actor_user_id",
+    "created_at",
+    "details"
+  ],
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 500
+    },
+    "pid": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 100
+    },
+    "action": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 100
+    },
+    "actor_user_id": {
+      "type": "integer"
+    },
+    "created_at": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 50
+    },
+    "details": {
+      "type": "object"
+    },
+    "loan_pid": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 100
+    },
+    "copy_pid": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 100
+    },
+    "patron_pid": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 100
+    },
+    "document_pid": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 100
+    },
+    "fine_pid": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 100
+    }
+  }
+}

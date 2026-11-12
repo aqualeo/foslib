@@ -38,7 +38,9 @@ def test_full_snapshot_import_is_idempotent(postgres_dsn):
     )
     app = flask.Flask("foslib-catalogue-test")
     app.config.from_object("invenio_opendefinition.config")
+    app.config.from_object("invenio_circulation.config")
     app.config.from_object("invenio_app_ils.config")
+    app.config.from_object("invenio_app_ils.circulation.config")
     app.config.update(
         SQLALCHEMY_DATABASE_URI=uri.render_as_string(hide_password=False),
         SQLALCHEMY_TRACK_MODIFICATIONS=True,
@@ -49,6 +51,9 @@ def test_full_snapshot_import_is_idempotent(postgres_dsn):
     InvenioRecords(app)
     InvenioJSONSchemas(app)
     InvenioPIDStore(app)
+    from invenio_app_ils.ext import InvenioAppIls
+
+    InvenioAppIls(app)
     snapshot = Path(__file__).parents[2] / "data/catalogue/openlibrary-1000.jsonl"
     with app.app_context():
         db.create_all()
@@ -72,5 +77,61 @@ def test_full_snapshot_import_is_idempotent(postgres_dsn):
         assert RecordMetadata.query.count() == 1000
         db.session.refresh(first)
         assert first.json["title"] == "Corrected by the platform librarian"
+        # Exercise the real additive ownership migrations and both complete
+        # demonstration seeds after importing the genuine shared catalogue.
+        from invenio_accounts.models import User
+
+        db.session.add_all(
+            [
+                User(id=1, email="seed-alpha@example.invalid", active=True),
+                User(id=2, email="seed-beta@example.invalid", active=True),
+            ]
+        )
+        db.session.commit()
+        migration_dir = Path(__file__).parents[2] / "invenio_app_ils/multitenancy/sql"
+        with psycopg.connect(catalogue_dsn, autocommit=True) as owner:
+            with owner.transaction():
+                owner.execute((migration_dir / "001_security.sql").read_text())
+            owner.execute(
+                "INSERT INTO foslib_private.principals(user_id) VALUES(1),(2)"
+            )
+            owner.execute(
+                "INSERT INTO foslib_private.tenants(id,slug,name) VALUES('11111111-1111-4111-8111-111111111111','alpha','Alpha School'),('22222222-2222-4222-8222-222222222222','beta','Beta School')"
+            )
+            owner.execute(
+                "INSERT INTO foslib_private.memberships(tenant_id,user_id,role) VALUES('11111111-1111-4111-8111-111111111111',1,'librarian'),('22222222-2222-4222-8222-222222222222',2,'librarian')"
+            )
+            for filename in ("002_records.sql", "003_catalogue_admin.sql"):
+                with owner.transaction():
+                    owner.execute((migration_dir / filename).read_text())
+            owner.execute(
+                "CREATE TABLE foslib_private.demo_seeds(tenant_id uuid PRIMARY KEY,seeded_at timestamptz DEFAULT now())"
+            )
+        from invenio_app_ils.multitenancy.bootstrap import _seed_school
+        from invenio_app_ils.multitenancy.service import scalar
+
+        _seed_school("alpha", 1)
+        _seed_school("beta", 2)
+        assert (
+            scalar("SELECT count(*) FROM records_metadata WHERE record_kind='item'")
+            == 175
+        )
+        assert (
+            scalar("SELECT count(*) FROM records_metadata WHERE record_kind='member'")
+            == 45
+        )
+        assert (
+            scalar(
+                "SELECT count(*) FROM records_metadata WHERE record_kind='loan' AND json->>'state'='ITEM_ON_LOAN'"
+            )
+            == 14
+        )
+        db.session.commit()
+        _seed_school("alpha", 1)
+        _seed_school("beta", 2)
+        assert (
+            scalar("SELECT count(*) FROM records_metadata WHERE record_kind='item'")
+            == 175
+        )
         db.session.remove()
         db.engine.dispose()

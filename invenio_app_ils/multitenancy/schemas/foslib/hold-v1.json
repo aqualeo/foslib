@@ -1,0 +1,48 @@
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "title": "Foslib hold",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema",
+    "pid",
+    "document_pid",
+    "patron_pid",
+    "status",
+    "created_at"
+  ],
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 500
+    },
+    "pid": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 100
+    },
+    "document_pid": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 100
+    },
+    "patron_pid": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 100
+    },
+    "status": {
+      "enum": [
+        "pending",
+        "fulfilled",
+        "cancelled"
+      ]
+    },
+    "created_at": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 50
+    }
+  }
+}

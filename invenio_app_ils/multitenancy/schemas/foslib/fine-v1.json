@@ -1,0 +1,70 @@
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "title": "Foslib fine",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema",
+    "pid",
+    "loan_pid",
+    "patron_pid",
+    "amount_cents",
+    "paid_cents",
+    "currency",
+    "reason",
+    "status",
+    "created_at"
+  ],
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 500
+    },
+    "pid": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 100
+    },
+    "loan_pid": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 100
+    },
+    "patron_pid": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 100
+    },
+    "amount_cents": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 10000000
+    },
+    "paid_cents": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "currency": {
+      "enum": [
+        "USD"
+      ]
+    },
+    "reason": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 200
+    },
+    "status": {
+      "enum": [
+        "unpaid",
+        "paid"
+      ]
+    },
+    "created_at": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 50
+    }
+  }
+}

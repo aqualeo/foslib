@@ -1,0 +1,43 @@
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "title": "Foslib payment",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema",
+    "pid",
+    "fine_pid",
+    "amount_cents",
+    "created_at",
+    "actor_user_id"
+  ],
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 500
+    },
+    "pid": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 100
+    },
+    "fine_pid": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 100
+    },
+    "amount_cents": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "created_at": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 50
+    },
+    "actor_user_id": {
+      "type": "integer"
+    }
+  }
+}

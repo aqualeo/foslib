@@ -20,6 +20,7 @@ from invenio_app_ils.document_requests.api import DOCUMENT_REQUEST_PID_TYPE
 from invenio_app_ils.ill.api import BORROWING_REQUEST_PID_TYPE
 from invenio_app_ils.ill.proxies import current_ils_ill
 from invenio_app_ils.indexer import ReferencedRecordsIndexer
+from invenio_app_ils.multitenancy.runtime import tenant_job_required
 from invenio_app_ils.patrons.api import PATRON_PID_TYPE
 from invenio_app_ils.proxies import current_app_ils
 
@@ -72,6 +73,7 @@ def get_ill_borrowing_requests(patron_pid):
 
 
 @shared_task(ignore_result=True)
+@tenant_job_required
 def index_referenced_records(patron):
     """Index referenced records."""
     indexer = ReferencedRecordsIndexer()
