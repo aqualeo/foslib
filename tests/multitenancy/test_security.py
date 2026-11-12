@@ -155,3 +155,49 @@ def test_capabilities_are_random():
     assert len(token) == 64
     assert hashlib.sha256(token.encode()).digest() == digest
     assert new_capability()[0] != token
+
+
+def test_missing_context_denies_insert(runtime):
+    with pytest.raises(psycopg.errors.InsufficientPrivilege):
+        runtime.execute("INSERT INTO foslib.test_copies VALUES (%s,97,1,'missing')", (ALPHA,))
+
+
+@pytest.mark.parametrize("disable,restore", [
+    ("UPDATE foslib_private.memberships SET active=false WHERE user_id=1",
+     "UPDATE foslib_private.memberships SET active=true WHERE user_id=1"),
+    ("UPDATE foslib_private.principals SET active=false WHERE user_id=1",
+     "UPDATE foslib_private.principals SET active=true WHERE user_id=1"),
+    ("UPDATE foslib_private.tenants SET active=false WHERE slug='alpha'",
+     "UPDATE foslib_private.tenants SET active=true WHERE slug='alpha'"),
+])
+def test_revoked_access_rechecked_each_statement(runtime, tokens, database, disable, restore):
+    with psycopg.connect(database[0], autocommit=True) as owner:
+        try:
+            with tenant_transaction(runtime, tokens[1], ALPHA):
+                assert runtime.execute("SELECT count(*) FROM foslib.test_copies").fetchone() == (1,)
+                owner.execute(disable)
+                assert runtime.execute("SELECT * FROM foslib.test_copies").fetchall() == []
+        finally:
+            owner.execute(restore)
+
+
+def test_expired_session_denied(runtime, database):
+    token, digest = new_capability()
+    with psycopg.connect(database[0], autocommit=True) as owner:
+        owner.execute("SET ROLE foslib_auth_broker")
+        owner.execute("SELECT foslib.issue_session(1,%s,now()+interval '1 hour')", (digest,))
+        owner.execute("RESET ROLE")
+        owner.execute("UPDATE foslib_private.auth_sessions SET expires_at=now()-interval '1 second' WHERE token_hash=%s", (digest,))
+    with pytest.raises(psycopg.errors.InvalidAuthorizationSpecification):
+        with tenant_transaction(runtime, token, ALPHA):
+            pytest.fail("expired capability accepted")
+
+
+def test_search_path_cannot_shadow_authentication(runtime, tokens):
+    with runtime.transaction():
+        runtime.execute("CREATE TEMP TABLE transaction_context(backend_pid integer, transaction_id xid8, tenant_id uuid)")
+        runtime.execute("INSERT INTO transaction_context VALUES (pg_backend_pid(),pg_current_xact_id(),%s)", (BETA,))
+        runtime.execute("SELECT set_config('search_path','pg_temp,public,foslib',true)")
+        runtime.execute("SELECT foslib.activate_context(%s,%s)", (tokens[1], ALPHA))
+        assert str(runtime.execute("SELECT foslib.current_tenant_id()").fetchone()[0]) == ALPHA
+        assert runtime.execute("SELECT barcode FROM foslib.test_copies").fetchall() == [("ALPHA-001",)]

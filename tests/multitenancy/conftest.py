@@ -5,26 +5,46 @@ Run with --confcutdir=tests/multitenancy to avoid the upstream ILS fixtures.
 """
 
 import hashlib
+import os
 import secrets
 from pathlib import Path
 
 import pgserver
 import psycopg
 import pytest
+from psycopg import sql
 
 ALPHA = "11111111-1111-4111-8111-111111111111"
 BETA = "22222222-2222-4222-8222-222222222222"
 
 
 @pytest.fixture(scope="session")
-def database(tmp_path_factory):
-    server = pgserver.get_server(tmp_path_factory.mktemp("postgres"))
-    uri = server.get_uri()
+def postgres_dsn(tmp_path_factory):
+    configured = os.environ.get("FOSLIB_TEST_POSTGRES_DSN")
+    if configured:
+        from psycopg.conninfo import conninfo_to_dict
+
+        if not conninfo_to_dict(configured).get("dbname", "").endswith("_test"):
+            pytest.fail("FOSLIB_TEST_POSTGRES_DSN must point to a disposable *_test database")
+        yield configured
+    else:
+        server = pgserver.get_server(tmp_path_factory.mktemp("postgres"))
+        yield server.get_uri()
+
+
+@pytest.fixture(scope="session")
+def database(postgres_dsn):
+    uri = postgres_dsn
     migration = Path(__file__).parents[2] / "invenio_app_ils/multitenancy/sql/001_security.sql"
     with psycopg.connect(uri, autocommit=True) as owner:
         with owner.transaction():
             owner.execute(migration.read_text())
-        owner.execute("CREATE ROLE foslib_test_runtime LOGIN NOSUPERUSER NOBYPASSRLS IN ROLE foslib_runtime")
+        from psycopg.conninfo import conninfo_to_dict
+
+        runtime_password = conninfo_to_dict(uri).get("password") or secrets.token_hex(32)
+        owner.execute(sql.SQL(
+            "CREATE ROLE foslib_test_runtime LOGIN NOSUPERUSER NOBYPASSRLS PASSWORD {} IN ROLE foslib_runtime"
+        ).format(sql.Literal(runtime_password)))
         owner.execute("""
           INSERT INTO foslib_private.principals(user_id, platform_admin)
             VALUES (1, false), (2, false), (3, true), (4, false), (5, false), (6, false);
@@ -88,13 +108,13 @@ def database(tmp_path_factory):
                 (user_id, hashlib.sha256(token.encode()).digest()),
             )
             owner.execute("RESET ROLE")
-    return uri, tokens
+    return uri, tokens, runtime_password
 
 
 @pytest.fixture
 def runtime(database):
-    uri, _ = database
-    with psycopg.connect(uri, user="foslib_test_runtime", autocommit=True) as conn:
+    uri, _, password = database
+    with psycopg.connect(uri, user="foslib_test_runtime", password=password, autocommit=True) as conn:
         yield conn
 
 
