@@ -13,11 +13,13 @@ from invenio_circulation.proxies import current_circulation
 from invenio_db import db
 
 from invenio_app_ils.circulation.search import get_all_expired_loans
+from invenio_app_ils.multitenancy.runtime import tenant_job_required
 
 celery_logger = get_task_logger(__name__)
 
 
 @shared_task
+@tenant_job_required
 def cancel_expired_loan_requests():
     """Cancel loan requests after expiration date has passed."""
     SystemAgent = current_app.config["ILS_PATRON_SYSTEM_AGENT_CLASS"]

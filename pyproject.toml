@@ -71,6 +71,7 @@ Homepage = "https://github.com/inveniosoftware/invenio-app-ils"
 ils = "invenio_app.cli:cli"
 
 [project.entry-points."flask.commands"]
+foslib-catalogue = "invenio_app_ils.multitenancy.catalogue_cli:catalogue"
 demo = "invenio_app_ils.cli:demo"
 fixtures = "invenio_app_ils.cli:fixtures"
 patrons = "invenio_app_ils.patrons.cli:patrons"
@@ -92,6 +93,7 @@ ils_providers = "invenio_app_ils.providers.ext:InvenioIlsProviders"
 ils_rest = "invenio_app_ils.ext:InvenioAppIlsREST"
 
 [project.entry-points."invenio_base.api_blueprints"]
+foslib = "invenio_app_ils.multitenancy.views:create_blueprint"
 ils_acquisition_stats = "invenio_app_ils.acquisition.stats.views:create_acquisition_stats_blueprint"
 ils_circulation = "invenio_app_ils.circulation.views:create_circulation_blueprint"
 ils_circulation_stats = "invenio_app_ils.circulation.stats.views:create_circulation_stats_blueprint"
@@ -115,6 +117,7 @@ ils_ui = "invenio_app_ils.ext:InvenioAppIlsUI"
 logged_out = "invenio_app_ils.views:create_logged_out_blueprint"
 
 [project.entry-points."invenio_celery.tasks"]
+foslib = "invenio_app_ils.multitenancy.tasks"
 ils_circulation = "invenio_app_ils.circulation.tasks"
 ils_circulation_notifications = "invenio_app_ils.circulation.notifications.tasks"
 ils_indexer_acquisitions = "invenio_app_ils.acquisition.indexer"
@@ -142,6 +145,7 @@ ils_notifications_logs = "invenio_app_ils.notifications.models"
 messages = "invenio_app_ils"
 
 [project.entry-points."invenio_jsonschemas.schemas"]
+foslib = "invenio_app_ils.multitenancy.schemas"
 acquisition = "invenio_app_ils.acquisition.schemas"
 document_requests = "invenio_app_ils.document_requests.schemas"
 documents = "invenio_app_ils.documents.schemas"

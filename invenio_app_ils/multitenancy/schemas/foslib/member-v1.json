@@ -1,0 +1,47 @@
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "title": "Foslib member",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema",
+    "pid",
+    "name",
+    "code",
+    "active"
+  ],
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 500
+    },
+    "pid": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 100
+    },
+    "name": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 200
+    },
+    "code": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 60
+    },
+    "year_group": {
+      "type": "string",
+      "maxLength": 50
+    },
+    "active": {
+      "type": "boolean"
+    },
+    "external_ref": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 200
+    }
+  }
+}

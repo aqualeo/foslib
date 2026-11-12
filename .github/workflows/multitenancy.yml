@@ -1,0 +1,34 @@
+# SPDX-License-Identifier: MIT
+name: Foslib tenant security and catalogue
+on:
+  pull_request:
+    branches: [master]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  postgres-security:
+    runs-on: ubuntu-24.04
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_USER: foslib_test
+          POSTGRES_PASSWORD: disposable-ci-only
+          POSTGRES_DB: foslib_security_test
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U foslib_test -d foslib_security_test"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      FOSLIB_TEST_POSTGRES_DSN: postgresql://foslib_test:disposable-ci-only@localhost:5432/foslib_security_test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+      - name: Install existing application and isolated test tools
+        run: pip install -e '.[opensearch2]' pytest 'psycopg[binary]>=3.2,<4' pgserver==0.1.4
+      - name: Test real PostgreSQL RLS and real Invenio catalogue import
+        run: python -m pytest --confcutdir=tests/multitenancy tests/multitenancy -q -o addopts=''

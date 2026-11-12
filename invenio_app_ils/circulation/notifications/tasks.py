@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: MIT
 
 """Circulation notifications."""
+
 from celery import shared_task
 from celery.utils.log import get_task_logger
 from flask import current_app
@@ -16,11 +17,13 @@ from invenio_app_ils.circulation.search import (
     get_all_overdue_loans,
 )
 from invenio_app_ils.circulation.utils import circulation_overdue_loan_days
+from invenio_app_ils.multitenancy.runtime import tenant_job_required
 
 celery_logger = get_task_logger(__name__)
 
 
 @shared_task
+@tenant_job_required
 def send_overdue_loans_notification_reminder():
     """Send notification message for loans that are overdue every X days."""
     days = current_app.config["ILS_CIRCULATION_NOTIFICATION_OVERDUE_REMINDER_INTERVAL"]
@@ -32,6 +35,7 @@ def send_overdue_loans_notification_reminder():
 
 
 @shared_task
+@tenant_job_required
 def send_expiring_loans_notification_reminder():
     """Send notification for loans that will expire in X days."""
     days = current_app.config["ILS_CIRCULATION_LOAN_WILL_EXPIRE_DAYS"]
@@ -41,6 +45,7 @@ def send_expiring_loans_notification_reminder():
 
 
 @shared_task
+@tenant_job_required
 def send_loan_end_date_updated_notification(loan):
     """Sends an notification to the patron whose loan was updated."""
     send_loan_notification(
