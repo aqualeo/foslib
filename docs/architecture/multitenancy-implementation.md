@@ -160,6 +160,17 @@ This identifies the immediate failure, not the underlying slow/stuck task.
 Inspect task identity, duration, retries and downstream waits before changing
 timeouts or restarting queued work. No infrastructure settings were changed.
 
+The last received tasks before that timeout were
+`closures.tasks.extend_active_loans_location_closure`. Its producer,
+`notify_location_updated`, schedules an ETA at the configured daily time,
+potentially almost 24 hours ahead. Celery can hold ETA deliveries unacknowledged
+until they become due, so this is a likely explanation for the broker's
+30-minute acknowledgement timeout even without a running task being stuck.
+Inspect the queued task ETAs in-network to confirm. A durable due-job dispatcher
+would avoid long broker-held ETAs; merely restarting the worker may repeat the
+failure. Any temporary broker-timeout change must preserve existing broker
+settings and be reviewed against the maximum ETA and task duration.
+
 Chromium also loaded the public homepage with HTTP 200, visible catalogue
 content and no JavaScript page errors. It showed the earlier fictional Alpha
 and Beta sample titles. This was a baseline check, not an authenticated
