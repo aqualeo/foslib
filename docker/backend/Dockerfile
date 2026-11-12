@@ -25,10 +25,12 @@ ENV INVENIO_INSTANCE_PATH=${WORKING_DIR}/var/instance
 ENV INVENIO_STATIC_URL_PATH='/invenio-assets'
 ENV INVENIO_STATIC_FOLDER=${INVENIO_INSTANCE_PATH}/invenio-assets
 
-# copy everything inside /src
+# Keep frontend-only changes out of the Python dependency/asset build cache.
 RUN mkdir -p ${WORKING_DIR}/src
-COPY ./ ${WORKING_DIR}/src
 WORKDIR ${WORKING_DIR}/src
+COPY pyproject.toml README.rst LICENSE ./
+COPY invenio_app_ils/ ./invenio_app_ils/
+COPY scripts/ ./scripts/
 
 # Install/create static files
 RUN mkdir -p ${INVENIO_INSTANCE_PATH}
@@ -36,6 +38,7 @@ RUN mkdir -p ${INVENIO_STATIC_FOLDER}
 
 RUN ./scripts/bootstrap
 
+COPY railway_wsgi.py ./railway_wsgi.py
 COPY --from=frontend /ui/build /opt/invenio_app_ils/ui
 
 # Set folder permissions
