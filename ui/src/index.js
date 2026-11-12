@@ -2,7 +2,7 @@ import React from 'react';
 import { createRoot } from 'react-dom/client';
 import { Router } from 'react-router-dom';
 import { OverridableContext } from 'react-overridable';
-import { history, http, InvenioILSApp } from '@inveniosoftware/react-invenio-app-ils';
+import { history, http, InvenioILSApp, SectionServices } from '@inveniosoftware/react-invenio-app-ils';
 import 'semantic-ui-less/semantic.less';
 
 // Invenio Accounts accepts form-encoded authentication requests.
@@ -29,9 +29,13 @@ const config = { APP: {
   ENVIRONMENTS: [],
 }};
 
+const components = {
+  'SectionsWrapper.servicesInstallationSections': () => <SectionServices />,
+};
+
 createRoot(document.getElementById('app')).render(
   <Router history={history}>
-    <OverridableContext.Provider value={{}}>
+    <OverridableContext.Provider value={components}>
       <InvenioILSApp config={config} />
     </OverridableContext.Provider>
   </Router>
