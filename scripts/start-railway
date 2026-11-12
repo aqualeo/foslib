@@ -8,4 +8,4 @@ exec python -m gunicorn \
     --timeout 120 \
     --access-logfile - \
     --error-logfile - \
-    invenio_app.wsgi:application
+    railway_wsgi:application

@@ -1,0 +1,7 @@
+.git
+**/node_modules
+**/build
+**/__pycache__
+**/.pytest_cache
+**/.env
+**/.env.*

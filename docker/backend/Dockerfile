@@ -1,7 +1,18 @@
 # SPDX-FileCopyrightText: 2018-2020 CERN.
 # SPDX-License-Identifier: MIT
 
-FROM ghcr.io/inveniosoftware/invenio:debian-python3.14 
+FROM node:22-bookworm-slim AS frontend
+WORKDIR /ui
+COPY ui/package*.json ./
+RUN npm ci --legacy-peer-deps --no-audit --no-fund
+COPY ui/ ./
+RUN GENERATE_SOURCEMAP=false \
+    REACT_APP_INVENIO_UI_URL="" \
+    REACT_APP_INVENIO_REST_ENDPOINTS_BASE_URL=/api \
+    REACT_APP_ENV_NAME=staging \
+    PUBLIC_URL="" npm run build
+
+FROM ghcr.io/inveniosoftware/invenio:debian-python3.14
 
 RUN apt-get update -y && apt-get install -y --no-install-recommends nodejs git ca-certificates && rm -rf /var/lib/apt/lists/*
 
@@ -24,6 +35,8 @@ RUN mkdir -p ${INVENIO_INSTANCE_PATH}
 RUN mkdir -p ${INVENIO_STATIC_FOLDER}
 
 RUN ./scripts/bootstrap
+
+COPY --from=frontend /ui/build /opt/invenio_app_ils/ui
 
 # Set folder permissions
 RUN chgrp -R 0 ${WORKING_DIR} && \
