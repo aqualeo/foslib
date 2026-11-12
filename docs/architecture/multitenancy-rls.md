@@ -3,6 +3,9 @@
 ## Scope
 Shared platform-managed bibliographic metadata, separate school inventories and transactions. Demo schools: Alpha and Beta; 1,000 legitimate ISBN-based titles. This is a design, not an implemented or deployed feature.
 
+The incremental control-plane implementation and remaining integration gates
+are tracked in [implementation status](multitenancy-implementation.md).
+
 ## Core entities
 - `tenants(id, slug, name, status)` for schools; platform administration is a separate privileged role.
 - `users` and `tenant_memberships(user_id, tenant_id, role, status)`; validate memberships server-side on each tenant switch.
