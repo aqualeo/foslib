@@ -42,14 +42,15 @@ SCHOOLS = {
 
 
 def _user(email, password, name, active=True):
+    email = email.strip().lower()
     user = User.query.filter(User.email == email).one_or_none()
     if user is None:
-        user = User(email=email, active=active, displayname=name)
+        user = User(email=email, active=active, user_profile={"full_name": name})
         db.session.add(user)
     user.password = hash_password(password)
     user.active = active
     user.confirmed_at = datetime.now(timezone.utc)
-    user.displayname = name
+    user.user_profile = dict(user.user_profile or {}, full_name=name)
     db.session.commit()
     return user.id
 

@@ -672,3 +672,39 @@ def test_disabling_authentication_account_revokes_database_access(
                 ).fetchone() == (0,)
         finally:
             owner.execute("UPDATE accounts_user SET active=true WHERE id=1")
+
+
+def test_bootstrap_uses_real_invenio_profile_model(scoped_ils, monkeypatch):
+    from invenio_accounts.models import User
+    from invenio_db import db
+
+    from invenio_app_ils.multitenancy import bootstrap
+
+    monkeypatch.setattr(bootstrap, "hash_password", lambda value: "test-hash-only")
+    with scoped_ils[3].app_context():
+        # This fixture inserts explicit account IDs; advance its test-only
+        # sequence before exercising the application's generated-ID path.
+        db.session.execute(
+            __import__("sqlalchemy").text(
+                "SELECT setval(pg_get_serial_sequence('accounts_user','id'),(SELECT max(id) FROM accounts_user),true)"
+            )
+        )
+        db.session.commit()
+        uid = bootstrap._user(
+            "BootstrapProfile@example.invalid", "test-only", "Fictional Library Admin"
+        )
+        user = db.session.get(User, uid)
+        assert user.user_profile["full_name"] == "Fictional Library Admin"
+        assert (
+            bootstrap._user(
+                "BOOTSTRAPPROFILE@example.invalid",
+                "test-only",
+                "Updated Fictional Admin",
+            )
+            == uid
+        )
+        assert (
+            db.session.get(User, uid).user_profile["full_name"]
+            == "Updated Fictional Admin"
+        )
+        db.session.remove()
