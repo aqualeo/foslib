@@ -89,6 +89,8 @@ def scoped_ils(postgres_dsn):
             c.execute((base / "002_records.sql").read_text())
         with c.transaction():
             c.execute((base / "003_catalogue_admin.sql").read_text())
+        with c.transaction():
+            c.execute((base / "004_login_tracking.sql").read_text())
         from psycopg import sql
 
         c.execute(
@@ -708,3 +710,37 @@ def test_bootstrap_uses_real_invenio_profile_model(scoped_ils, monkeypatch):
             == "Updated Fictional Admin"
         )
         db.session.remove()
+
+
+def test_real_user_login_tracking_keeps_identity_protected(library_app, scoped_ils):
+    """Invenio login relationships bump the parent account's version counter."""
+    from datetime import datetime, timezone
+
+    from invenio_accounts.models import User
+    from invenio_db import db
+
+    with library_app.app_context():
+        user = db.session.get(User, 1)
+        previous = user.version_id
+        user.current_login_at = datetime.now(timezone.utc)
+        user.current_login_ip = "127.0.0.1"
+        user.login_count = (user.login_count or 0) + 1
+        db.session.commit()
+        assert user.version_id > previous
+        db.session.remove()
+    dsn, password, _, _ = scoped_ils
+    with psycopg.connect(
+        dsn, user="foslib_record_test_runtime", password=password, autocommit=True
+    ) as c:
+        for column, value in [
+            ("password", "forged"),
+            ("email", "forged@example.invalid"),
+            ("active", False),
+        ]:
+            with pytest.raises(psycopg.errors.InsufficientPrivilege):
+                c.execute(
+                    __import__("psycopg")
+                    .sql.SQL("UPDATE accounts_user SET {}=%s WHERE id=1")
+                    .format(__import__("psycopg").sql.Identifier(column)),
+                    (value,),
+                )

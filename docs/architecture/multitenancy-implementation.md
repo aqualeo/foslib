@@ -166,3 +166,11 @@ python -m pytest --confcutdir=tests/multitenancy tests/multitenancy -q -o addopt
 Browser acceptance must still exercise the deployed login, catalogue, inventory,
 issue/return, reservations, fines and reciprocal isolation with both school
 accounts. An HTTP 200 or successful build is not sufficient.
+
+Migration `004_login_tracking.sql` grants the restricted runtime only UPDATE on
+`accounts_user.version_id` and `updated`: Invenio's login-info relationship updates
+advance the parent optimistic-lock counter. Password, email, activation and role
+writes remain unavailable. The regression suite exercises the real User model's
+tracking writes and directly rejects protected identity updates. Existing
+installations apply this additive grant transactionally and record its filename
+in `foslib_private.migrations`; it does not rewrite account data.

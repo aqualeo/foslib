@@ -334,6 +334,7 @@ def bootstrap():
     db.session.commit()
     _migration("002_records.sql")
     _migration("003_catalogue_admin.sql")
+    _migration("004_login_tracking.sql")
     _roles(config)
     snapshot = Path("data/catalogue/openlibrary-1000.jsonl")
     result = current_app.test_cli_runner().invoke(
