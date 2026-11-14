@@ -744,3 +744,32 @@ def test_real_user_login_tracking_keeps_identity_protected(library_app, scoped_i
                     .format(__import__("psycopg").sql.Identifier(column)),
                     (value,),
                 )
+
+
+def test_browser_csrf_header_matches_real_invenio_middleware(library_app):
+    # Exercise the actual middleware with the HTTP header used by the browser.
+    from flask import Flask, jsonify
+    from invenio_rest.csrf import CSRFProtectMiddleware
+
+    from invenio_app_ils.multitenancy.runtime import install_runtime
+
+    app = Flask("foslib-csrf-integration-test")
+    app.config.update(
+        SECRET_KEY=secrets.token_hex(32),
+        FOSLIB_MULTITENANT_ENABLED=True,
+        CSRF_HEADER="X_CSRFTOKEN",
+        CSRF_COOKIE_NAME="csrftoken",
+        SESSION_COOKIE_SECURE=False,
+    )
+    install_runtime(app)
+    CSRFProtectMiddleware(app)
+
+    @app.route("/csrf", methods=["GET", "POST"])
+    def endpoint():
+        return jsonify(ok=True)
+
+    client = app.test_client()
+    assert client.get("/csrf").status_code == 200
+    token = client.get_cookie("csrftoken").value
+    assert client.post("/csrf").status_code == 400
+    assert client.post("/csrf", headers={"X-CSRFToken": token}).status_code == 200

@@ -140,6 +140,8 @@ def install_runtime(app):
     ):
         return
     app.extensions["foslib-runtime"] = True
+    # HTTP intermediaries may discard headers containing underscores.
+    app.config["CSRF_HEADER"] = "X-CSRFToken"
     app.config["SECURITY_LOGIN_USER_TEMPLATE"] = "invenio_app_ils/foslib_login.html"
     app.config["THEME_SITENAME"] = "FOS Library Management System"
     if not event.contains(Session, "after_begin", _bind_context):
