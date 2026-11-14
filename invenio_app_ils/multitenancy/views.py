@@ -124,7 +124,11 @@ def create_blueprint(app):
             user={
                 "id": current_user.id,
                 "email": current_user.email,
-                "name": current_user.displayname or current_user.email,
+                "name": (getattr(current_user, "user_profile", None) or {}).get(
+                    "full_name"
+                )
+                or getattr(current_user, "displayname", None)
+                or current_user.email,
             },
             schools=schools,
             selected_tenant_id=session.get("foslib_tenant"),

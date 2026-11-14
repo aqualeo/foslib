@@ -89,6 +89,8 @@ def scoped_ils(postgres_dsn):
             c.execute((base / "002_records.sql").read_text())
         with c.transaction():
             c.execute((base / "003_catalogue_admin.sql").read_text())
+        with c.transaction():
+            c.execute((base / "004_login_tracking.sql").read_text())
         from psycopg import sql
 
         c.execute(
@@ -672,3 +674,103 @@ def test_disabling_authentication_account_revokes_database_access(
                 ).fetchone() == (0,)
         finally:
             owner.execute("UPDATE accounts_user SET active=true WHERE id=1")
+
+
+def test_bootstrap_uses_real_invenio_profile_model(scoped_ils, monkeypatch):
+    from invenio_accounts.models import User
+    from invenio_db import db
+
+    from invenio_app_ils.multitenancy import bootstrap
+
+    monkeypatch.setattr(bootstrap, "hash_password", lambda value: "test-hash-only")
+    with scoped_ils[3].app_context():
+        # This fixture inserts explicit account IDs; advance its test-only
+        # sequence before exercising the application's generated-ID path.
+        db.session.execute(
+            __import__("sqlalchemy").text(
+                "SELECT setval(pg_get_serial_sequence('accounts_user','id'),(SELECT max(id) FROM accounts_user),true)"
+            )
+        )
+        db.session.commit()
+        uid = bootstrap._user(
+            "BootstrapProfile@example.invalid", "test-only", "Fictional Library Admin"
+        )
+        user = db.session.get(User, uid)
+        assert user.user_profile["full_name"] == "Fictional Library Admin"
+        assert (
+            bootstrap._user(
+                "BOOTSTRAPPROFILE@example.invalid",
+                "test-only",
+                "Updated Fictional Admin",
+            )
+            == uid
+        )
+        assert (
+            db.session.get(User, uid).user_profile["full_name"]
+            == "Updated Fictional Admin"
+        )
+        db.session.remove()
+
+
+def test_real_user_login_tracking_keeps_identity_protected(library_app, scoped_ils):
+    """Invenio login relationships bump the parent account's version counter."""
+    from datetime import datetime, timezone
+
+    from invenio_accounts.models import User
+    from invenio_db import db
+
+    with library_app.app_context():
+        user = db.session.get(User, 1)
+        previous = user.version_id
+        user.current_login_at = datetime.now(timezone.utc)
+        user.current_login_ip = "127.0.0.1"
+        user.login_count = (user.login_count or 0) + 1
+        db.session.commit()
+        assert user.version_id > previous
+        db.session.remove()
+    dsn, password, _, _ = scoped_ils
+    with psycopg.connect(
+        dsn, user="foslib_record_test_runtime", password=password, autocommit=True
+    ) as c:
+        for column, value in [
+            ("password", "forged"),
+            ("email", "forged@example.invalid"),
+            ("active", False),
+        ]:
+            with pytest.raises(psycopg.errors.InsufficientPrivilege):
+                c.execute(
+                    __import__("psycopg")
+                    .sql.SQL("UPDATE accounts_user SET {}=%s WHERE id=1")
+                    .format(__import__("psycopg").sql.Identifier(column)),
+                    (value,),
+                )
+
+
+def test_browser_csrf_header_matches_real_invenio_middleware(library_app):
+    # Exercise the actual middleware with the HTTP header used by the browser.
+    from flask import Flask, jsonify
+    from invenio_rest.csrf import CSRFProtectMiddleware, reset_token
+
+    from invenio_app_ils.multitenancy.runtime import install_runtime
+
+    app = Flask("foslib-csrf-integration-test")
+    app.config.update(
+        SECRET_KEY=secrets.token_hex(32),
+        FOSLIB_MULTITENANT_ENABLED=True,
+        CSRF_HEADER="X_CSRFTOKEN",
+        CSRF_COOKIE_NAME="csrftoken",
+        SESSION_COOKIE_SECURE=False,
+    )
+    install_runtime(app)
+    CSRFProtectMiddleware(app)
+
+    @app.route("/csrf", methods=["GET", "POST"])
+    def endpoint():
+        reset_token()
+        return jsonify(ok=True)
+
+    client = app.test_client()
+    assert client.get("/csrf").status_code == 200
+    token = client.get_cookie("csrftoken").value
+    assert client.post("/csrf").status_code == 400
+    assert client.post("/csrf", headers={"X-CSRFToken": token}).status_code == 200

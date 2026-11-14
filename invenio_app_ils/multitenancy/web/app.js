@@ -71,7 +71,7 @@
     if (method !== "GET") {
       headers["Content-Type"] = "application/json";
       headers["X-Foslib-CSRF"] = state.me?.csrf_token || "";
-      headers.X_CSRFTOKEN = cookie("csrftoken");
+      headers["X-CSRFToken"] = cookie("csrftoken");
     }
     const response = await fetch(API + path, { method, headers, credentials: "same-origin", body: data === undefined ? undefined : JSON.stringify(data) });
     let payload;

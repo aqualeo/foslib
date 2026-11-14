@@ -42,14 +42,15 @@ SCHOOLS = {
 
 
 def _user(email, password, name, active=True):
+    email = email.strip().lower()
     user = User.query.filter(User.email == email).one_or_none()
     if user is None:
-        user = User(email=email, active=active, displayname=name)
+        user = User(email=email, active=active, user_profile={"full_name": name})
         db.session.add(user)
     user.password = hash_password(password)
     user.active = active
     user.confirmed_at = datetime.now(timezone.utc)
-    user.displayname = name
+    user.user_profile = dict(user.user_profile or {}, full_name=name)
     db.session.commit()
     return user.id
 
@@ -333,6 +334,7 @@ def bootstrap():
     db.session.commit()
     _migration("002_records.sql")
     _migration("003_catalogue_admin.sql")
+    _migration("004_login_tracking.sql")
     _roles(config)
     snapshot = Path("data/catalogue/openlibrary-1000.jsonl")
     result = current_app.test_cli_runner().invoke(
