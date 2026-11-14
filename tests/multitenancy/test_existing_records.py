@@ -749,7 +749,7 @@ def test_real_user_login_tracking_keeps_identity_protected(library_app, scoped_i
 def test_browser_csrf_header_matches_real_invenio_middleware(library_app):
     # Exercise the actual middleware with the HTTP header used by the browser.
     from flask import Flask, jsonify
-    from invenio_rest.csrf import CSRFProtectMiddleware
+    from invenio_rest.csrf import CSRFProtectMiddleware, reset_token
 
     from invenio_app_ils.multitenancy.runtime import install_runtime
 
@@ -766,6 +766,7 @@ def test_browser_csrf_header_matches_real_invenio_middleware(library_app):
 
     @app.route("/csrf", methods=["GET", "POST"])
     def endpoint():
+        reset_token()
         return jsonify(ok=True)
 
     client = app.test_client()
